@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 import random
 import string
 
-# --- Updated Cipher Logic ---
+# --- Cipher Logic ---
 
 import random
 import string
@@ -163,6 +163,8 @@ class CipherApp:
             self.root.clipboard_append(key)
             self.copy_key_btn.config(text="Copied!")
             self.root.after(1500, lambda: self.copy_key_btn.config(text="Copy Key"))
+
+
 
 # --- Launch ---
 
