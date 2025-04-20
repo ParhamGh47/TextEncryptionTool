@@ -3,11 +3,8 @@ from tkinter import ttk, messagebox
 import random
 import string
 
+
 # --- Cipher Logic ---
-
-import random
-import string
-
 def get_cipher_maps(seed, shift, iterations):
     random.seed(seed)
     original = list(string.ascii_letters + string.punctuation + string.digits + " ")
@@ -21,15 +18,24 @@ def get_cipher_maps(seed, shift, iterations):
     dec_map = {s: o for o, s in zip(original, shuffled)}
     return enc_map, dec_map
 
-def encrypt(text):
-    seed = random.randint(0, 2**32 - 1)
-    shift = random.randint(1, 10)
-    iterations = random.randint(1, 5)
+def encrypt(text, provided_key=None):
+    if provided_key:
+        try:
+            hex_key, shift, iterations = provided_key.split('-')
+            seed = int(hex_key, 16)
+            shift = int(shift)
+            iterations = int(iterations)
+        except ValueError:
+            return None, "Invalid key format."
+    else:
+        seed = random.randint(0, 2**32 - 1)
+        shift = random.randint(1, 10)
+        iterations = random.randint(1, 5)
 
     enc_map, _ = get_cipher_maps(seed, shift, iterations)
     result = ''.join(enc_map.get(c, c) for c in text)
     
-    key = f"{hex(seed)}-{shift}-{iterations}"
+    key = provided_key if provided_key else f"{hex(seed)}-{shift}-{iterations}"
     return result, key
 
 def decrypt(text, key):
@@ -45,14 +51,13 @@ def decrypt(text, key):
     except ValueError:
         return None
 
-    
+
 
 # --- GUI Setup ---
-
 class CipherApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Cyber Encryptor")
+        self.root.title("Text Encryption Tool")
         self.root.configure(bg="black")
         self.root.geometry("520x360")
         self.root.resizable(False, False)
@@ -105,18 +110,16 @@ class CipherApp:
 
         if mode == "Encrypt":
             self.action_btn.config(text="Encrypt")
-            self.key_box.config(state='disabled')
             self.output_label.config(text="Encrypted Text:")
-            self.copy_key_btn.config(state="normal")
         else:
             self.action_btn.config(text="Decrypt")
-            self.key_box.config(state='normal')
             self.output_label.config(text="Decrypted Text:")
             self.copy_key_btn.config(state="disabled")
 
     def perform_action(self):
         text = self.input_box.get("1.0", tk.END).strip()
-        key = self.key_box.get("1.0", tk.END).strip() if self.mode.get() == "Decrypt" else ""
+        key = self.key_box.get("1.0", tk.END).strip()
+
         self.output_box.config(state='normal')
         self.output_box.delete("1.0", tk.END)
         self.key_box.config(state='normal')
@@ -128,17 +131,26 @@ class CipherApp:
             if not text:
                 messagebox.showerror("Missing Input", "Please enter text to encrypt.")
                 return
-            encrypted, key = encrypt(text)
+            
+            encrypted, generated_key = encrypt(text, key if key else None)
+
+            if encrypted is None:
+                messagebox.showerror("Error", "Invalid key format.")
+                return
+
             self.output_box.insert(tk.END, encrypted)
-            self.key_box.insert(tk.END, key)
+            self.key_box.insert(tk.END, generated_key)
             self.key_box.config(state='disabled')
+
         else:
             if not text or not key:
                 messagebox.showerror("Missing Info", "Please enter both encrypted text and key.")
                 return
+            
             decrypted = decrypt(text, key)
+            
             if decrypted is None:
-                self.output_box.insert(tk.END, "Invalid key format.")
+                messagebox.showerror("Error", "Invalid key format.")
             else:
                 self.output_box.insert(tk.END, decrypted)
 
@@ -167,7 +179,6 @@ class CipherApp:
 
 
 # --- Launch ---
-
 root = tk.Tk()
 app = CipherApp(root)
 root.mainloop()
