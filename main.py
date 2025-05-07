@@ -7,16 +7,28 @@ import string
 # --- Cipher Logic ---
 def get_cipher_maps(seed, shift, iterations):
     random.seed(seed)
-    original = list(string.ascii_letters + string.punctuation + string.digits + " ")
-    shuffled = original[:]
+
+    letters = list(string.ascii_letters)
+    others = list(string.punctuation + string.digits + " ")
+
+    shuffled_letters = letters[:]
+    shuffled_others = others[:]
 
     for _ in range(iterations):
-        random.shuffle(shuffled)
-        shuffled = [shuffled[(i + shift) % len(shuffled)] for i in range(len(shuffled))]
+        random.shuffle(shuffled_letters)
+        shuffled_letters = [shuffled_letters[(i + shift) % len(shuffled_letters)] for i in range(len(shuffled_letters))]
+
+        random.shuffle(shuffled_others)
+        shuffled_others = [shuffled_others[(i + shift) % len(shuffled_others)] for i in range(len(shuffled_others))]
+
+    original = letters + others
+    shuffled = shuffled_letters + shuffled_others
 
     enc_map = {o: s for o, s in zip(original, shuffled)}
     dec_map = {s: o for o, s in zip(original, shuffled)}
+
     return enc_map, dec_map
+
 
 def encrypt(text, provided_key=None):
     if provided_key:
@@ -33,10 +45,14 @@ def encrypt(text, provided_key=None):
         iterations = random.randint(1, 5)
 
     enc_map, _ = get_cipher_maps(seed, shift, iterations)
-    result = ''.join(enc_map.get(c, c) for c in text)
-    
+    space_placeholder = "@"
+    modified_text = text.replace(" ", space_placeholder)
+
+    result = ''.join(enc_map.get(c, c) for c in modified_text)
+
     key = provided_key if provided_key else f"{hex(seed)}-{shift}-{iterations}"
     return result, key
+
 
 def decrypt(text, key):
     try:
@@ -46,11 +62,15 @@ def decrypt(text, key):
         iterations = int(iterations)
 
         _, dec_map = get_cipher_maps(seed, shift, iterations)
-        result = ''.join(dec_map.get(c, c) for c in text)
-        return result
+        decrypted_text = ''.join(dec_map.get(c, c) for c in text)
+
+        # Restore spaces
+        space_placeholder = "@"
+        restored_text = decrypted_text.replace(space_placeholder, " ")
+
+        return restored_text
     except ValueError:
         return None
-
 
 
 # --- GUI Setup ---
@@ -69,6 +89,7 @@ class CipherApp:
 
         self.setup_fields()
         self.update_mode()
+
 
     def setup_fields(self):
         style = {'bg': 'black', 'fg': 'lime', 'insertbackground': 'lime', 'font': ('Courier', 10)}
@@ -98,6 +119,7 @@ class CipherApp:
         self.copy_output_btn = tk.Button(self.root, text="Copy Output", command=self.copy_output, bg="black", fg="lime", font=("Courier", 9), relief=tk.GROOVE)
         self.copy_output_btn.pack(pady=(5, 10))
 
+
     def update_mode(self):
         mode = self.mode.get()
         self.input_box.delete("1.0", tk.END)
@@ -111,10 +133,12 @@ class CipherApp:
         if mode == "Encrypt":
             self.action_btn.config(text="Encrypt")
             self.output_label.config(text="Encrypted Text:")
+            self.copy_key_btn.config(state="normal")
         else:
             self.action_btn.config(text="Decrypt")
             self.output_label.config(text="Decrypted Text:")
             self.copy_key_btn.config(state="disabled")
+
 
     def perform_action(self):
         text = self.input_box.get("1.0", tk.END).strip()
@@ -156,6 +180,7 @@ class CipherApp:
 
         self.output_box.config(state='disabled')
 
+
     def copy_output(self):
         self.output_box.config(state='normal')
         text = self.output_box.get("1.0", tk.END).strip()
@@ -165,6 +190,7 @@ class CipherApp:
             self.root.clipboard_append(text)
             self.copy_output_btn.config(text="Copied!")
             self.root.after(1500, lambda: self.copy_output_btn.config(text="Copy Output"))
+
 
     def copy_key(self):
         self.key_box.config(state='normal')
